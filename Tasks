@@ -1,10 +1,5 @@
 Kanban.txt
 === A Fazer ===
-- Refatorar Main.java para integrar camadas Service e Model
-- Criar persistência funcional em arquivos .txt
-- Implementar interface Pagável (polimorfismo real)
-- Prototipar CRUD de usuários (com criptografia funcional)
-- Validar leitura e escrita no arquivo data/despesas.txt
 
 === Em Progresso ===
 - Ajustar estrutura de POO (herança e sobrecarga)
@@ -17,3 +12,8 @@ Kanban.txt
 === concluido ===
 - Estrutura de tarefas criada
 - Planejamento da PoC definido
+- Refatorar Main.java para integrar camadas Service e Model
+- Criar persistência funcional em arquivos .txt
+- Implementar interface Pagável (polimorfismo real)
+- Prototipar CRUD de usuários (com criptografia funcional)
+- Validar leitura e escrita no arquivo data/despesas.txt
