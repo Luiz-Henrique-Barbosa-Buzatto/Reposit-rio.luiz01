@@ -1,20 +1,156 @@
-<html>
+php<?php
 
-<head>
-    <title> Pesquisando Cadastros pelo Sexo </title>
-</head>
+// Interface Pagável
+interface Pagavel {
+    public function calcularValorPagar(): float;
+    public function estaPago(): bool;
+    public function marcarComoPago(): void;
+}
 
-<body>
-    <h3>Pesquisa</h3><br>
-    <form name="Cadastro" action="pesquisa-resultado.php" method="POST">
-        <label>Selecione o Sexo do Cliente:</label>
-        <select name="Sexo">
-            <option value="M">Masculino</option>
-            <option value="F">Feminino</option>
-            <option value="N">Não Declarado</option>
-        </select><br>
-        <input type="submit" name="enviar" value="Enviar">
-    </form>
-</body>
+// Classe Despesa implementando Pagavel
+class Despesa implements Pagavel {
+    private $valor;
+    private $pago = false;
 
-</html>
+    public function __construct($valor) {
+        $this->valor = $valor;
+    }
+
+    public function calcularValorPagar(): float {
+        return $this->valor;
+    }
+
+    public function estaPago(): bool {
+        return $this->pago;
+    }
+
+    public function marcarComoPago(): void {
+        $this->pago = true;
+    }
+}
+
+// Classe Usuario com criptografia
+class Usuario {
+    private $id;
+    private $nome;
+    private $email;
+    private $senha; // hash
+    private $sexo;
+
+    public function __construct($nome, $email, $senha, $sexo) {
+        $this->nome = $nome;
+        $this->email = $email;
+        $this->senha = password_hash($senha, PASSWORD_DEFAULT);
+        $this->sexo = $sexo;
+    }
+
+    public function getNome() { return $this->nome; }
+    public function getEmail() { return $this->email; }
+    public function getSexo() { return $this->sexo; }
+    public function verificarSenha($senha) {
+        return password_verify($senha, $this->senha);
+    }
+
+    public function toArray() {
+        return [
+            'nome' => $this->nome,
+            'email' => $this->email,
+            'senha' => $this->senha,
+            'sexo' => $this->sexo
+        ];
+    }
+}
+
+// Serviço para CRUD de usuários
+class UsuarioService {
+    private $arquivo = 'data/usuarios.txt';
+
+    public function __construct() {
+        if (!file_exists('data')) {
+            mkdir('data', 0755, true);
+        }
+        if (!file_exists($this->arquivo)) {
+            touch($this->arquivo);
+        }
+    }
+
+    public function create(Usuario $usuario) {
+        $data = serialize($usuario->toArray()) . PHP_EOL;
+        return file_put_contents($this->arquivo, $data, FILE_APPEND) !== false;
+    }
+
+    public function readAll() {
+        if (!is_readable($this->arquivo)) return [];
+        $linhas = file($this->arquivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $usuarios = [];
+        foreach ($linhas as $linha) {
+            $data = unserialize($linha);
+            $u = new Usuario($data['nome'], $data['email'], $data['senha'], $data['sexo']);
+            $usuarios[] = $u;
+        }
+        return $usuarios;
+    }
+
+    public function update($email, $novosDados) {
+        $usuarios = $this->readAll();
+        $conteudo = '';
+        foreach ($usuarios as $u) {
+            if ($u->getEmail() === $email) {
+                $u = new Usuario(
+                    $novosDados['nome'] ?? $u->getNome(),
+                    $email,
+                    $novosDados['senha'] ?? $u->getSenha(), // Re-hash if new
+                    $novosDados['sexo'] ?? $u->getSexo()
+                );
+            }
+            $conteudo .= serialize($u->toArray()) . PHP_EOL;
+        }
+        return file_put_contents($this->arquivo, $conteudo) !== false;
+    }
+
+    public function delete($email) {
+        $usuarios = $this->readAll();
+        $conteudo = '';
+        foreach ($usuarios as $u) {
+            if ($u->getEmail() !== $email) {
+                $conteudo .= serialize($u->toArray()) . PHP_EOL;
+            }
+        }
+        return file_put_contents($this->arquivo, $conteudo) !== false;
+    }
+}
+
+// Serviço para despesas com validação de leitura/escrita
+class DespesaService {
+    private $arquivo = 'data/despesas.txt';
+
+    public function __construct() {
+        if (!file_exists('data')) {
+            mkdir('data', 0755, true);
+        }
+        if (!file_exists($this->arquivo)) {
+            touch($this->arquivo);
+        }
+    }
+
+    public function salvar(Despesa $despesa) {
+        if (!is_writable($this->arquivo)) return false;
+        $linha = $despesa->calcularValorPagar() . "|" . ($despesa->estaPago() ? '1' : '0') . PHP_EOL;
+        return file_put_contents($this->arquivo, $linha, FILE_APPEND) !== false;
+    }
+
+    public function listar() {
+        if (!is_readable($this->arquivo)) return [];
+        $linhas = file($this->arquivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $despesas = [];
+        foreach ($linhas as $linha) {
+            list($valor, $pago) = explode('|', $linha);
+            $d = new Despesa((float)$valor);
+            if ($pago == '1') $d->marcarComoPago();
+            $despesas[] = $d;
+        }
+        return $despesas;
+    }
+}
+
+?>
